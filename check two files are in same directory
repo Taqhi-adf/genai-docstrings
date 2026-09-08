@@ -1,0 +1,44 @@
+To check whether two files exist in the same directory—or whether a specific file lives inside your current working directory—use Python's standard `pathlib` module.
+
+**1. Check if Two File Paths share the same parent directory**
+Compare the `.parent` property of two file paths:
+```python
+from pathlib import Path
+file1 = Path("data/report.csv")
+file2 = Path("data/config.json")
+
+# Compare absolute directory locations
+if file1.resolve().parent == file2.resolve().parent:
+    print("Both files are in the SAME directory.")
+else:
+    print("Files are in DIFFERENT directories.")
+
+```
+---
+**2. Check if a File is in the Current Working Directory**
+Compare the file's parent folder directly against `Path.cwd()`:
+```python
+from pathlib import Path
+file_path = Path("Screenshot 2026-09-07 094050.png")
+# Path.cwd() gets current working directory
+if file_path.resolve().parent == Path.cwd().resolve():
+    print("The file is in the current directory.")
+else:
+    print("The file is located somewhere else.")
+
+```
+---
+**3. Check if a File is in the Same Directory as your Python Script**
+When running scripts in VS Code, the working directory (`Path.cwd()`) can sometimes differ from the script's actual folder. To guarantee you're checking relative to the `.py` file itself:
+```python
+from pathlib import Path
+# Get the directory where THIS python file is saved
+script_dir = Path(__file__).resolve().parent
+target_file = script_dir / "Screenshot 2026-09-07 094050.png"
+
+if target_file.is_file():
+    print("The file exists right next to this Python script!")
+else:
+    print("File not found in the script's folder.")
+
+```

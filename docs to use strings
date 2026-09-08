@@ -1,0 +1,115 @@
+To write clear, effective docstrings in Python, follow PEP 257 standards: use triple-double quotes (`"""`), start with a concise command-form summary line, and leave a blank line before adding additional context.
+
+---
+
+**Essential Best Practices**
+
+* **Summary Line:** Write in the imperative mood (e.g., `"Calculate total price."`, not `"Calculates total price."`).
+* **Explicit Types:** State argument types, default values, and return types clearly (or use type hints directly in the function signature).
+* **Document Exceptions:** Mention any errors or exceptions the function might explicitly raise.
+* **Consistency:** Stick to one style across your codebase (e.g., Google or NumPy style).
+
+---
+
+**Common Docstring Styles with Examples**
+
+### 1. One-Line Docstring
+
+Used for simple functions or methods where the purpose is obvious.
+
+```python
+def square(x: float) -> float:
+    """Return the square of a given number."""
+    return x ** 2
+
+```
+
+---
+
+### 2. Google Style (Most Common)
+
+Clean, human-readable, and popular for general-purpose Python development.
+
+```python
+def calculate_discount(price: float, discount: float = 0.10) -> float:
+    """Calculate the final price of an item after applying a discount.
+
+    Args:
+        price (float): The original price of the item. Must be positive.
+        discount (float, optional): The discount rate as a decimal. Defaults to 0.10.
+
+    Returns:
+        float: The final price after applying the discount.
+
+    Raises:
+        ValueError: If `price` or `discount` is negative.
+    """
+    if price < 0 or discount < 0:
+        raise ValueError("Price and discount must be non-negative.")
+    
+    return price * (1 - discount)
+
+```
+
+---
+
+### 3. NumPy Style
+
+Widely used in data science, machine learning, and numerical computing libraries.
+
+```python
+def normalize_array(arr: list[float]) -> list[float]:
+    """Normalize a list of numbers to a range between 0 and 1.
+
+    Parameters
+    ----------
+    arr : list of float
+        The list of numerical values to normalize.
+
+    Returns
+    -------
+    list of float
+        A new list containing the scaled values.
+
+    Examples
+    --------
+    >>> normalize_array([10.0, 20.0, 30.0])
+    [0.0, 0.5, 1.0]
+    """
+    min_val, max_val = min(arr), max(arr)
+    if min_val == max_val:
+        return [0.0] * len(arr)
+    return [(x - min_val) / (max_val - min_val) for x in arr]
+
+```
+
+---
+
+### 4. Class Docstring
+
+Placed immediately after the `class` definition to describe the object's purpose and public attributes.
+
+```python
+class BankAccount:
+    """Represent a customer's bank account.
+
+    Attributes:
+        owner (str): The name of the account holder.
+        balance (float): The current available balance in the account.
+    """
+
+    def __init__(self, owner: str, initial_balance: float = 0.0) -> None:
+        """Initialize a new BankAccount instance.
+
+        Args:
+            owner (str): The name of the account owner.
+            initial_balance (float, optional): Starting funds. Defaults to 0.0.
+        """
+        self.owner = owner
+        self.balance = initial_balance
+
+```
+
+---
+
+For a visual step-by-step breakdown of Python docstring conventions and how tools like Sphinx process them, check out this [Python Docstrings & Documentation Guide](https://www.youtube.com/watch?v=Oqmbx_gnUfc). This tutorial covers various formatting styles like Google and NumPy along with hands-on documentation testing practices.

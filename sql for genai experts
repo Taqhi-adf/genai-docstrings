@@ -1,0 +1,713 @@
+Absolutely. Since you are preparing for **GenAI/AI roles and already have SQL/DB experience**, the best approach is to practice SQL using a **realistic enterprise database**, not isolated `SELECT` examples.
+
+I created a complete **Microsoft SQL Server practice database** containing:
+
+* Customers
+* Employees
+* Departments
+* Products
+* Orders
+* OrderItems
+* Payments
+* SupportTickets
+* Documents
+* DocumentChunks for RAG practice
+
+### 📥 Download the complete SQL practice script
+
+[**Download — GenAI SQL Mastery Practice.sql**](sandbox:/mnt/data/GenAI_SQL_Mastery_Practice.sql)
+
+Run it in **SQL Server Management Studio (SSMS)** or VS Code with the SQL Server extension.
+
+---
+
+# 🧠 Your SQL → GenAI Learning Roadmap
+
+Don't try to memorize every SQL command. Practice in this order:
+
+```text
+SQL Fundamentals
+      ↓
+DDL
+      ↓
+DML
+      ↓
+Joins
+      ↓
+Subqueries
+      ↓
+Aggregations
+      ↓
+CTEs
+      ↓
+Window Functions
+      ↓
+Views
+      ↓
+Stored Procedures
+      ↓
+Functions
+      ↓
+Triggers
+      ↓
+Transactions
+      ↓
+DCL / Security
+      ↓
+Query Optimization
+      ↓
+SQL + Python
+      ↓
+Natural Language → SQL
+      ↓
+SQL Agent
+      ↓
+GenAI + SQL
+      ↓
+Enterprise AI Assistant
+```
+
+---
+
+# 1. DDL — Data Definition Language
+
+DDL changes the **database structure**.
+
+Practice:
+
+```sql
+CREATE DATABASE
+CREATE TABLE
+ALTER TABLE
+DROP TABLE
+TRUNCATE TABLE
+CREATE INDEX
+CREATE VIEW
+CREATE PROCEDURE
+CREATE FUNCTION
+CREATE TRIGGER
+```
+
+Example:
+
+```sql
+CREATE TABLE Employees
+(
+    EmployeeID INT PRIMARY KEY,
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    Salary DECIMAL(12,2)
+);
+```
+
+Then practice:
+
+```sql
+ALTER TABLE Employees
+ADD Email VARCHAR(100);
+```
+
+And understand the difference:
+
+```text
+DELETE    → removes rows
+TRUNCATE  → removes all rows quickly
+DROP      → removes the table itself
+```
+
+---
+
+# 2. DML — Data Manipulation Language
+
+This is your daily SQL practice area.
+
+```sql
+SELECT
+INSERT
+UPDATE
+DELETE
+```
+
+Start with:
+
+```sql
+SELECT * FROM Employees;
+```
+
+Then:
+
+```sql
+SELECT FirstName, Salary
+FROM Employees
+WHERE Salary > 1000000;
+```
+
+Practice:
+
+```sql
+INSERT INTO Employees
+(FirstName, LastName, Salary)
+VALUES
+('Test', 'User', 800000);
+```
+
+Then:
+
+```sql
+UPDATE Employees
+SET Salary = 900000
+WHERE FirstName = 'Test';
+```
+
+Then:
+
+```sql
+DELETE FROM Employees
+WHERE FirstName = 'Test';
+```
+
+---
+
+# 3. Filtering
+
+Master these:
+
+```sql
+WHERE
+AND
+OR
+NOT
+IN
+BETWEEN
+LIKE
+IS NULL
+IS NOT NULL
+```
+
+Example:
+
+```sql
+SELECT *
+FROM Customers
+WHERE City = 'Hyderabad';
+```
+
+```sql
+SELECT *
+FROM Products
+WHERE UnitPrice BETWEEN 1000 AND 5000;
+```
+
+```sql
+SELECT *
+FROM Customers
+WHERE FirstName LIKE 'A%';
+```
+
+---
+
+# 4. Aggregations
+
+Very important for interviews.
+
+Practice:
+
+```sql
+COUNT()
+SUM()
+AVG()
+MIN()
+MAX()
+```
+
+Example:
+
+```sql
+SELECT
+    AVG(Salary) AS AverageSalary
+FROM Employees;
+```
+
+Then:
+
+```sql
+SELECT
+    DepartmentID,
+    AVG(Salary) AS AverageSalary
+FROM Employees
+GROUP BY DepartmentID;
+```
+
+Then add:
+
+```sql
+HAVING
+```
+
+Example:
+
+```sql
+SELECT
+    DepartmentID,
+    AVG(Salary) AS AverageSalary
+FROM Employees
+GROUP BY DepartmentID
+HAVING AVG(Salary) > 1000000;
+```
+
+---
+
+# 5. JOINs — Extremely Important
+
+Master:
+
+```text
+INNER JOIN
+LEFT JOIN
+RIGHT JOIN
+FULL OUTER JOIN
+CROSS JOIN
+SELF JOIN
+```
+
+Start here:
+
+```sql
+SELECT
+    c.FirstName,
+    o.OrderID,
+    o.TotalAmount
+FROM Customers c
+INNER JOIN Orders o
+    ON c.CustomerID = o.CustomerID;
+```
+
+Then master multi-table joins:
+
+```text
+Customers
+   ↓
+Orders
+   ↓
+OrderItems
+   ↓
+Products
+```
+
+This is exactly the kind of SQL you'll encounter in enterprise applications.
+
+---
+
+# 6. Subqueries
+
+Practice:
+
+### Employees earning above average
+
+```sql
+SELECT *
+FROM Employees
+WHERE Salary >
+(
+    SELECT AVG(Salary)
+    FROM Employees
+);
+```
+
+### Highest salary
+
+```sql
+SELECT *
+FROM Employees
+WHERE Salary =
+(
+    SELECT MAX(Salary)
+    FROM Employees
+);
+```
+
+Then learn:
+
+```sql
+IN
+EXISTS
+NOT EXISTS
+Correlated Subqueries
+```
+
+---
+
+# 7. CTEs
+
+Learn:
+
+```sql
+WITH
+```
+
+Example:
+
+```sql
+WITH HighValueOrders AS
+(
+    SELECT *
+    FROM Orders
+    WHERE TotalAmount > 5000
+)
+SELECT *
+FROM HighValueOrders;
+```
+
+Then move to **recursive CTEs** for employee hierarchies.
+
+---
+
+# 8. Window Functions ⭐
+
+These are extremely important for data/AI interviews.
+
+Practice:
+
+```sql
+ROW_NUMBER()
+RANK()
+DENSE_RANK()
+LAG()
+LEAD()
+SUM() OVER()
+AVG() OVER()
+```
+
+Example:
+
+```sql
+SELECT
+    EmployeeID,
+    FirstName,
+    Salary,
+    RANK() OVER
+    (
+        ORDER BY Salary DESC
+    ) AS SalaryRank
+FROM Employees;
+```
+
+Then:
+
+```sql
+SELECT
+    EmployeeID,
+    FirstName,
+    DepartmentID,
+    Salary,
+    RANK() OVER
+    (
+        PARTITION BY DepartmentID
+        ORDER BY Salary DESC
+    ) AS DepartmentRank
+FROM Employees;
+```
+
+This is a **must-know SQL interview pattern**.
+
+---
+
+# 9. TCL — Transaction Control Language
+
+Master:
+
+```text
+BEGIN TRANSACTION
+COMMIT
+ROLLBACK
+SAVE TRANSACTION
+```
+
+Example:
+
+```sql
+BEGIN TRANSACTION;
+
+UPDATE Products
+SET StockQuantity = StockQuantity - 1
+WHERE ProductID = 1;
+
+ROLLBACK TRANSACTION;
+```
+
+Nothing is permanently changed.
+
+Then:
+
+```sql
+BEGIN TRANSACTION;
+
+UPDATE Products
+SET StockQuantity = StockQuantity + 5
+WHERE ProductID = 1;
+
+COMMIT TRANSACTION;
+```
+
+Now the change is committed.
+
+---
+
+# 10. DCL — Database Security
+
+Learn:
+
+```text
+CREATE LOGIN
+CREATE USER
+CREATE ROLE
+GRANT
+REVOKE
+DENY
+```
+
+This is particularly important for **GenAI SQL agents**.
+
+For example, your AI agent should ideally have:
+
+```text
+AI Agent
+   ↓
+Read-only SQL User
+   ↓
+SELECT only
+```
+
+rather than:
+
+```text
+AI Agent
+   ↓
+DB Admin
+   ↓
+DROP TABLE 💥
+```
+
+A practical enterprise principle is:
+
+> **Give an AI SQL agent the minimum permissions it needs.**
+
+---
+
+# 11. SQL + GenAI ⭐⭐⭐
+
+This is where your SQL learning becomes directly relevant to GenAI.
+
+Suppose the user asks:
+
+> "Show me the top 5 customers by spending."
+
+A GenAI system can transform:
+
+```text
+Natural Language
+       ↓
+LLM
+       ↓
+SQL
+       ↓
+SQL Server
+       ↓
+Results
+       ↓
+LLM
+       ↓
+Natural Language Answer
+```
+
+The SQL might be:
+
+```sql
+SELECT TOP 5
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    SUM(o.TotalAmount) AS TotalSpending
+FROM Customers c
+JOIN Orders o
+    ON c.CustomerID = o.CustomerID
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName
+ORDER BY TotalSpending DESC;
+```
+
+This is the foundation of a **Text-to-SQL / SQL Agent**.
+
+---
+
+# 12. SQL + RAG ⭐⭐⭐
+
+I also included:
+
+```text
+Documents
+DocumentChunks
+```
+
+in the database.
+
+This allows you to practice an architecture like:
+
+```text
+PDF / DOC / TXT
+       ↓
+Document Processing
+       ↓
+Chunks
+       ↓
+DocumentChunks SQL Table
+       ↓
+Embeddings
+       ↓
+Vector Database
+       ↓
+RAG
+```
+
+For example:
+
+```sql
+SELECT *
+FROM DocumentChunks
+WHERE ChunkText LIKE '%refund%';
+```
+
+You can eventually combine:
+
+```text
+SQL
++
+FAISS
++
+Embeddings
++
+LLM
+```
+
+to build an enterprise assistant.
+
+---
+
+# 🔥 30 SQL Questions You Should Solve Yourself
+
+The downloaded script contains these exercises, but **don't look at the answers immediately**.
+
+Try:
+
+1. Find all Hyderabad customers.
+2. Find the 3 most expensive products.
+3. Find customers with more than one order.
+4. Calculate total revenue.
+5. Calculate revenue by customer.
+6. Calculate revenue by product.
+7. Calculate monthly revenue.
+8. Find employees above average salary.
+9. Find second-highest salary.
+10. Find third-highest salary.
+11. Find duplicate emails.
+12. Find customers without orders.
+13. Find products never ordered.
+14. Find open support tickets.
+15. Find high-priority tickets.
+16. Find orders without successful payments.
+17. Find customers spending more than ₹10,000.
+18. Find the best-selling product.
+19. Find the department with highest average salary.
+20. Find latest order for each customer.
+21. Find every employee's manager.
+22. Build an employee hierarchy.
+23. Calculate running sales.
+24. Rank employees within departments.
+25. Find top 2 employees in each department.
+26. Find products below reorder level.
+27. Find cancelled orders.
+28. Find refunded orders.
+29. Find refund-related documents.
+30. Find RAG chunks containing `"retrieval"`.
+
+---
+
+# 🏆 Your Daily SQL Practice Routine
+
+If you have **1 hour of free time**, use:
+
+### 15 minutes — Fundamentals
+
+```text
+SELECT
+WHERE
+ORDER BY
+GROUP BY
+HAVING
+```
+
+### 15 minutes — Joins
+
+```text
+INNER
+LEFT
+RIGHT
+FULL
+SELF
+```
+
+### 15 minutes — Advanced SQL
+
+```text
+Subqueries
+CTEs
+Window Functions
+```
+
+### 15 minutes — GenAI SQL
+
+Take natural-language questions:
+
+```text
+"Show customers with highest spending."
+
+"Which products are low in stock?"
+
+"Which department has the highest salary?"
+
+"Show unresolved high-priority tickets."
+```
+
+and write the SQL yourself.
+
+---
+
+# 🚀 Final Goal: Become a GenAI + SQL Engineer
+
+Don't stop at traditional SQL.
+
+Aim for this:
+
+```text
+                 GENAI SQL ENGINEER
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+       SQL             GenAI             RAG
+        │                │                │
+   SQL Server          LLM             Embeddings
+        │                │                │
+   DML/DDL/DCL        Prompting        FAISS
+        │                │                │
+   Joins/CTEs         Agents          Retrieval
+        │                │                │
+ Window Functions   Text-to-SQL       Context
+        │                │                │
+        └────────────────┼────────────────┘
+                         ↓
+                ENTERPRISE AI ASSISTANT
+```
+
+The **most valuable next step** after completing this database is to build a **Natural Language → SQL GenAI Agent** on top of it, where you ask questions in English and the AI safely generates and executes SQL. That will connect your **SQL + Python + LangChain/LangGraph + local LLM + RAG** knowledge into one practical GenAI project.

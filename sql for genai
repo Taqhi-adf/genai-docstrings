@@ -1,0 +1,221 @@
+To practice building GenAI pipelines and LLM-based applications (e.g., Text-to-SQL, RAG agents, database memory), mastering the complete SQL command set is essential.
+This hands-on, runnable masterclass script uses an **AI Product Catalog & Knowledge Base System** schema.
+---
+**Schema Overview**
+```
++----------------+       +-------------------+       +---------------------+
+|   SUPPLIERS    |       |     PRODUCTS      |       |    VECTOR_EMBEDS    |
++----------------+       +-------------------+       +---------------------+
+| supplier_id PK |<------| product_id     PK |<------| embed_id         PK |
+| name           |       | name              |       | product_id       FK |
+| country        |       | category          |       | vector_data         |
++----------------+       | price             |       +---------------------+
+                         | supplier_id    FK |
+                         +-------------------+
+                                   ^
+                                   |
+                         +-------------------+
+                         |   AGENT_LOGS      |
+                         +-------------------+
+                         | log_id         PK |
+                         | product_id     FK |
+                         | prompt_tokens     |
+                         +-------------------+
+
+```
+---
+### Phase 1: Data Definition Language (DDL)
+*DDL commands define, alter, and manage the structural schema of the database.*
+```sql
+-- 1. Create a fresh database for practice
+CREATE DATABASE genai_knowledge_db;
+USE genai_knowledge_db;
+
+-- 2. Create Primary Tables (Suppliers and Products)
+CREATE TABLE suppliers (
+    supplier_id INT PRIMARY KEY AUTO_INCREMENT,
+    supplier_name VARCHAR(100) NOT NULL,
+    country VARCHAR(50) DEFAULT 'USA',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    product_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_name VARCHAR(150) NOT NULL,
+    category VARCHAR(50),
+    price DECIMAL(10, 2),
+    stock_quantity INT DEFAULT 0,
+    supplier_id INT,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id) ON DELETE CASCADE
+);
+
+-- 3. Create Supporting Tables for LLM Application Tracking
+CREATE TABLE vector_embeddings (
+    embed_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT,
+    embedding_dimensions INT DEFAULT 1536, -- Standard OpenAI dimension size
+    status VARCHAR(20) DEFAULT 'PENDING',
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE agent_logs (
+    log_id INT PRIMARY KEY AUTO_INCREMENT,
+    query_text TEXT,
+    response_text TEXT,
+    tokens_used INT
+);
+
+-- 4. ALTER: Modify table structure (Add/Modify/Drop columns)
+ALTER TABLE products ADD COLUMN description TEXT;
+ALTER TABLE agent_logs MODIFY COLUMN tokens_used BIGINT;
+ALTER TABLE agent_logs RENAME COLUMN query_text TO user_prompt;
+
+-- 5. CREATE INDEX: Optimize retrieval speeds for vector lookups and filtering
+CREATE INDEX idx_product_category ON products(category);
+
+-- 6. TRUNCATE vs DROP (Demonstration)
+CREATE TABLE temp_cache (cache_id INT, cache_data VARCHAR(255));
+TRUNCATE TABLE temp_cache; -- Empties rows instantly while maintaining table structure
+DROP TABLE temp_cache;     -- Completely removes table and schema definition
+```
+---
+### Phase 2: Data Control Language (DCL)
+*DCL commands manage user access, authentication, and security privileges.*
+```sql
+-- 1. Create a user role for the GenAI Backend Agent
+CREATE USER 'llm_agent_user'@'localhost' IDENTIFIED BY 'SecurePass123!';
+
+-- 2. GRANT: Give specific privileges needed by a query agent
+GRANT SELECT, INSERT, UPDATE ON genai_knowledge_db.products TO 'llm_agent_user'@'localhost';
+GRANT SELECT, INSERT ON genai_knowledge_db.agent_logs TO 'llm_agent_user'@'localhost';
+
+-- 3. REVOKE: Remove destructive permissions from the agent
+REVOKE UPDATE ON genai_knowledge_db.products FROM 'llm_agent_user'@'localhost';
+
+-- 4. Apply privilege changes
+FLUSH PRIVILEGES;
+```
+---
+### Phase 3: Data Manipulation Language (DML) & Data Query Language (DQL)
+*DML handles inserting, updating, and deleting records, while DQL (SELECT) queries data.*
+```sql
+-- ============================================================================
+-- A. INSERTION (DML)
+-- ============================================================================
+INSERT INTO suppliers (supplier_name, country) 
+VALUES 
+('NVIDIA Tech', 'USA'),
+('Logitech', 'Switzerland'),
+('Anker Global', 'China');
+
+INSERT INTO products (product_name, category, price, stock_quantity, supplier_id, description) 
+VALUES 
+('H100 GPU Server', 'Hardware', 29999.99, 10, 1, 'Enterprise AI acceleration unit'),
+('Wireless Noise-Canceling Headphones', 'Audio', 199.99, 150, 3, 'Bluetooth over-ear headset'),
+('MX Master 3S Mouse', 'Peripherals', 99.99, 200, 2, 'Ergonomics productivity mouse'),
+('USB-C Fast Charger', 'Accessories', 29.99, 500, 3, '65W GaN wall adapter'),
+('RTX 4090 GPU', 'Hardware', 1599.99, 0, 1, 'Consumer flagship graphics card');
+
+-- ============================================================================
+-- B. UPDATE & DELETE (DML)
+-- ============================================================================
+-- Update stock quantity based on category condition
+UPDATE products 
+SET stock_quantity = stock_quantity + 20 
+WHERE category = 'Hardware';
+
+-- Delete out-of-stock items under a specific price point
+DELETE FROM products 
+WHERE stock_quantity = 0 AND price < 100.00;
+
+-- ============================================================================
+-- C. QUERIES FOR GENAI & TEXT-TO-SQL PRACTICES (DQL)
+-- ============================================================================
+
+-- 1. Filter, Sort, Limit (Basic Retrieval)
+SELECT product_name, price, stock_quantity 
+FROM products 
+WHERE price > 100.00 
+ORDER BY price DESC 
+LIMIT 3;
+
+-- 2. Aggregations & Grouping (LLM Summarization Data)
+SELECT 
+    category,
+    COUNT(*) AS total_items,
+    AVG(price) AS average_price,
+    SUM(stock_quantity) AS total_inventory
+FROM products
+GROUP BY category
+HAVING AVG(price) > 50.00;
+
+-- 3. Joins (Relational Context Assembly)
+SELECT 
+    p.product_id,
+    p.product_name,
+    p.price,
+    s.supplier_name,
+    s.country
+FROM products p
+INNER JOIN suppliers s ON p.supplier_id = s.supplier_id;
+
+-- 4. Subqueries & CTEs (Complex Reasoning Pipelines)
+WITH HighValueProducts AS (
+    SELECT product_name, category, price 
+    FROM products 
+    WHERE price > (SELECT AVG(price) FROM products)
+)
+SELECT * FROM HighValueProducts WHERE category = 'Hardware';
+
+-- 5. Conditional Expressions (CASE Statements)
+SELECT 
+    product_name,
+    stock_quantity,
+    CASE 
+        WHEN stock_quantity = 0 THEN 'OUT OF STOCK'
+        WHEN stock_quantity < 20 THEN 'LOW STOCK'
+        ELSE 'IN STOCK'
+    END AS stock_status
+FROM products;
+
+```
+---
+### Phase 4: Transaction Control Language (TCL)
+*TCL commands manage atomic operations to maintain data integrity during multi-step database changes.*
+```sql
+-- Disable autocommit to manually manage transactions
+SET autocommit = 0;
+-- Scenario: Processing an order and updating stock safely
+-- 1. Start Transaction
+START TRANSACTION;
+-- Step A: Deduct inventory for an order
+UPDATE products 
+SET stock_quantity = stock_quantity - 1 
+WHERE product_id = 2 AND stock_quantity >= 1;
+
+-- Step B: Set a SAVEPOINT after stock deduction
+SAVEPOINT stock_updated;
+
+-- Step C: Log the agent transaction
+INSERT INTO agent_logs (user_prompt, response_text, tokens_used) 
+VALUES ('Purchase product 2', 'Stock deducted successfully', 150);
+
+-- Step D: Test ROLLBACK to Savepoint (If logging failed or needed conditional undo)
+-- ROLLBACK TO SAVEPOINT stock_updated;
+
+-- Step E: Commit changes permanently to database
+COMMIT;
+
+-- Re-enable autocommit
+SET autocommit = 1;
+
+```
+---
+### SQL Command Reference
+| Category | Primary Commands | Core Function |
+| --- | --- | --- |
+| **DDL** (Data Definition Language) | `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `RENAME` | Defines and alters database schema structures. |
+| **DML** (Data Manipulation Language) | `INSERT`, `UPDATE`, `DELETE` | Modifies, adds, and removes table records. |
+| **DQL** (Data Query Language) | `SELECT` | Filters, aggregates, and retrieves stored data. |
+| **DCL** (Data Control Language) | `GRANT`, `REVOKE` | Controls user permissions and security access levels. |
+| **TCL** (Transaction Control Language) | `COMMIT`, `ROLLBACK`, `SAVEPOINT` | Manages atomic operations and transactional integrity. |

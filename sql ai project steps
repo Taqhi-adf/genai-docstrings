@@ -1,0 +1,1363 @@
+It seems like I can’t do more advanced data analysis right now. Please try again later.
+Absolutely. Since you are learning GenAI from the basics, the best way is to learn **Tools in GenAI from simple Python functions → LangChain tools → multiple tools → tool-calling LLM → agents → LangGraph agents → SQL/RAG/enterprise tools**.
+
+Below is a practical progression with code.
+
+# 🧰 GenAI Tools — Basic to Advanced
+
+## 1. What is a Tool in GenAI?
+
+A **tool** is a function that an AI model can use to perform an action or obtain information that it cannot reliably do by itself.
+
+For example:
+
+```text
+User:
+"What is 25 × 40?"
+
+LLM
+ ↓
+Calculator Tool
+ ↓
+1000
+ ↓
+LLM
+ ↓
+"The answer is 1000."
+```
+
+Another example:
+
+```text
+User
+ ↓
+AI Agent
+ ├── Calculator Tool
+ ├── Weather Tool
+ ├── SQL Tool
+ ├── Search Tool
+ ├── Email Tool
+ └── File Search Tool
+```
+
+The important idea is:
+
+> **LLM decides WHAT tool to use; the tool performs the actual operation.**
+
+---
+
+# Level 1 — Normal Python Function
+
+Before learning GenAI tools, understand ordinary Python functions.
+
+```python
+def add(a, b):
+    return a + b
+
+
+result = add(10, 20)
+
+print(result)
+```
+
+Output:
+
+```text
+30
+```
+
+This is not yet a GenAI tool.
+
+It is simply a Python function.
+
+---
+
+# Level 2 — Convert Function into a Tool
+
+With LangChain, you can expose a Python function as a tool.
+
+Install:
+
+```bash
+pip install langchain
+```
+
+Code:
+
+```python
+from langchain.tools import tool
+
+
+@tool
+def add_numbers(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+
+result = add_numbers.invoke({
+    "a": 10,
+    "b": 20
+})
+
+print(result)
+```
+
+Output:
+
+```text
+30
+```
+
+Now the function has become a **LangChain Tool**.
+
+---
+
+# Level 3 — Create More Tools
+
+Let's create several basic tools.
+
+```python
+from langchain.tools import tool
+
+
+@tool
+def add_numbers(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+
+@tool
+def multiply_numbers(a: int, b: int) -> int:
+    """Multiply two numbers."""
+    return a * b
+
+
+@tool
+def subtract_numbers(a: int, b: int) -> int:
+    """Subtract b from a."""
+    return a - b
+
+
+@tool
+def divide_numbers(a: float, b: float) -> float:
+    """Divide a by b."""
+    if b == 0:
+        return "Cannot divide by zero"
+    return a / b
+```
+
+You now have four tools:
+
+```text
+add_numbers
+multiply_numbers
+subtract_numbers
+divide_numbers
+```
+
+---
+
+# Level 4 — Tool Metadata
+
+A good GenAI tool should have:
+
+```text
+Tool name
+Tool description
+Input parameters
+Input types
+Function
+Return value
+```
+
+For example:
+
+```python
+@tool
+def get_employee_salary(employee_id: int) -> float:
+    """
+    Get the salary of an employee.
+
+    Args:
+        employee_id: Employee ID.
+    """
+    
+    salaries = {
+        101: 1200000,
+        102: 900000,
+        103: 1500000
+    }
+
+    return salaries.get(employee_id, 0)
+```
+
+The LLM can understand from the description what the tool does.
+
+---
+
+# Level 5 — Give Tools to an LLM
+
+This is where GenAI becomes interesting.
+
+Install Ollama integration:
+
+```bash
+pip install langchain langchain-ollama
+```
+
+Make sure Ollama is installed and your local model is available:
+
+```bash
+ollama pull qwen3:4b
+```
+
+Then:
+
+```python
+from langchain_ollama import ChatOllama
+from langchain.tools import tool
+
+
+@tool
+def add_numbers(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+
+llm = ChatOllama(
+    model="qwen3:4b",
+    temperature=0
+)
+
+llm_with_tools = llm.bind_tools([
+    add_numbers
+])
+
+response = llm_with_tools.invoke(
+    "What is 25 + 75?"
+)
+
+print(response)
+```
+
+The important difference is:
+
+```python
+llm
+```
+
+versus:
+
+```python
+llm.bind_tools([...])
+```
+
+The second one tells the model:
+
+> "You have access to these tools."
+
+---
+
+# Level 6 — Multiple Tools
+
+Now give the model several tools.
+
+```python
+from langchain_ollama import ChatOllama
+from langchain.tools import tool
+
+
+@tool
+def add_numbers(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+
+@tool
+def multiply_numbers(a: int, b: int) -> int:
+    """Multiply two numbers."""
+    return a * b
+
+
+@tool
+def subtract_numbers(a: int, b: int) -> int:
+    """Subtract b from a."""
+    return a - b
+
+
+tools = [
+    add_numbers,
+    multiply_numbers,
+    subtract_numbers
+]
+
+
+llm = ChatOllama(
+    model="qwen3:4b",
+    temperature=0
+)
+
+llm_with_tools = llm.bind_tools(tools)
+
+response = llm_with_tools.invoke(
+    "Calculate 20 multiplied by 5."
+)
+
+print(response)
+```
+
+Conceptually:
+
+```text
+User
+ │
+ │ "20 × 5"
+ ↓
+LLM
+ │
+ │ chooses multiply_numbers
+ ↓
+Tool
+ │
+ │ 20 × 5
+ ↓
+100
+ │
+ ↓
+LLM
+ │
+ ↓
+Final answer
+```
+
+---
+
+# Level 7 — Understanding Tool Calls
+
+A tool-enabled model doesn't necessarily execute your Python function automatically.
+
+It may return a **tool call request**.
+
+For example, conceptually:
+
+```python
+AIMessage(
+    content="",
+    tool_calls=[
+        {
+            "name": "multiply_numbers",
+            "args": {
+                "a": 20,
+                "b": 5
+            }
+        }
+    ]
+)
+```
+
+The model is saying:
+
+```text
+I want to call:
+
+multiply_numbers(20, 5)
+```
+
+Your application then executes it.
+
+This distinction is extremely important.
+
+---
+
+# Level 8 — Manually Execute the Tool
+
+You can create a tool registry.
+
+```python
+tools = [
+    add_numbers,
+    multiply_numbers
+]
+
+tool_map = {
+    tool.name: tool
+    for tool in tools
+}
+```
+
+Then:
+
+```python
+for tool_call in response.tool_calls:
+
+    tool_name = tool_call["name"]
+
+    tool_args = tool_call["args"]
+
+    selected_tool = tool_map[tool_name]
+
+    result = selected_tool.invoke(tool_args)
+
+    print(result)
+```
+
+This gives you the basic architecture of a tool-calling system.
+
+---
+
+# Level 9 — Tool Calling Loop
+
+A real agent usually needs a loop.
+
+```text
+User
+ ↓
+LLM
+ ↓
+Does it need a tool?
+ ├── No → Final Answer
+ │
+ └── Yes
+      ↓
+   Tool Call
+      ↓
+   Execute Tool
+      ↓
+   Tool Result
+      ↓
+   LLM
+      ↓
+   Does it need another tool?
+      ↓
+     ...
+      ↓
+   Final Answer
+```
+
+This is the foundation of an **AI Agent**.
+
+---
+
+# Level 10 — LangChain Agent
+
+Instead of manually implementing the loop, LangChain can manage the agent workflow.
+
+Conceptually:
+
+```python
+from langchain.agents import create_agent
+```
+
+Example:
+
+```python
+from langchain.agents import create_agent
+from langchain_ollama import ChatOllama
+from langchain.tools import tool
+
+
+@tool
+def add_numbers(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+
+@tool
+def multiply_numbers(a: int, b: int) -> int:
+    """Multiply two numbers."""
+    return a * b
+
+
+llm = ChatOllama(
+    model="qwen3:4b",
+    temperature=0
+)
+
+tools = [
+    add_numbers,
+    multiply_numbers
+]
+
+agent = create_agent(
+    model=llm,
+    tools=tools
+)
+
+result = agent.invoke({
+    "messages": [
+        {
+            "role": "user",
+            "content": "Calculate 25 multiplied by 40."
+        }
+    ]
+})
+
+print(result)
+```
+
+This is much closer to a real GenAI application.
+
+---
+
+# Level 11 — Custom Business Tool
+
+Now let's move beyond calculators.
+
+Imagine an enterprise has employees.
+
+Create:
+
+```python
+employees = {
+    101: {
+        "name": "Rahul",
+        "department": "AI",
+        "salary": 1200000
+    },
+    102: {
+        "name": "Priya",
+        "department": "Engineering",
+        "salary": 1500000
+    }
+}
+```
+
+Tool:
+
+```python
+@tool
+def get_employee(employee_id: int) -> dict:
+    """Get employee information using employee ID."""
+
+    return employees.get(
+        employee_id,
+        {"error": "Employee not found"}
+    )
+```
+
+Now the user can ask:
+
+```text
+Show employee 101.
+```
+
+The agent can decide:
+
+```text
+get_employee(101)
+```
+
+---
+
+# Level 12 — SQL Tool
+
+This is especially important for your GenAI learning.
+
+You already created the `GenAI_SQL_Practice` SQL Server database with tables such as `Customers`, `Products`, `Orders`, `OrderItems`, `Payments`, `SupportTickets`, `Documents`, and `DocumentChunks`.  
+
+You can expose SQL Server as a tool.
+
+Basic version:
+
+```python
+import pyodbc
+from langchain.tools import tool
+
+
+def get_connection():
+
+    return pyodbc.connect(
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "SERVER=localhost;"
+        "DATABASE=GenAI_SQL_Practice;"
+        "Trusted_Connection=yes;"
+        "TrustServerCertificate=yes;"
+    )
+
+
+@tool
+def execute_sql(query: str) -> str:
+    """Execute a read-only SQL SELECT query."""
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute(query)
+
+    rows = cursor.fetchall()
+
+    columns = [
+        column[0]
+        for column in cursor.description
+    ]
+
+    conn.close()
+
+    return str([
+        dict(zip(columns, row))
+        for row in rows
+    ])
+```
+
+Now you have:
+
+```text
+SQL Server
+     ↑
+     │
+execute_sql()
+     ↑
+     │
+AI Agent
+```
+
+---
+
+# Level 13 — Why You Should NOT Use the Basic SQL Tool in Production
+
+This is dangerous:
+
+```python
+execute_sql(query)
+```
+
+because an LLM could potentially generate:
+
+```sql
+DROP TABLE Customers;
+```
+
+or:
+
+```sql
+DELETE FROM Customers;
+```
+
+or:
+
+```sql
+UPDATE Customers
+SET City = 'Delhi';
+```
+
+Therefore your SQL tool needs **guardrails**.
+
+---
+
+# Level 14 — Safe SQL Tool
+
+Start by allowing only:
+
+```text
+SELECT
+WITH
+```
+
+Example:
+
+```python
+import re
+
+
+def is_safe_sql(query):
+
+    query = query.strip().upper()
+
+    forbidden = [
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "DROP",
+        "ALTER",
+        "TRUNCATE",
+        "CREATE",
+        "EXEC",
+        "GRANT",
+        "REVOKE",
+        "DENY"
+    ]
+
+    for word in forbidden:
+
+        if re.search(
+            rf"\b{word}\b",
+            query
+        ):
+            return False
+
+    return query.startswith(
+        ("SELECT", "WITH")
+    )
+```
+
+Then:
+
+```python
+@tool
+def execute_safe_sql(query: str) -> str:
+    """Execute a read-only SQL query."""
+
+    if not is_safe_sql(query):
+
+        return "ERROR: Unsafe SQL blocked."
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute(query)
+
+    rows = cursor.fetchall()
+
+    columns = [
+        column[0]
+        for column in cursor.description
+    ]
+
+    conn.close()
+
+    return str([
+        dict(zip(columns, row))
+        for row in rows
+    ])
+```
+
+Now:
+
+```sql
+SELECT * FROM Customers;
+```
+
+can be allowed.
+
+But:
+
+```sql
+DELETE FROM Customers;
+```
+
+is blocked.
+
+---
+
+# Level 15 — Natural Language → SQL Tool
+
+Now we combine everything.
+
+```text
+User
+ │
+ │ "Show customers from Hyderabad"
+ ↓
+LLM
+ │
+ ↓
+SQL Generator
+ │
+ ↓
+SELECT ...
+FROM Customers
+WHERE City = 'Hyderabad'
+ │
+ ↓
+SQL Guardrail
+ │
+ ↓
+SQL Server
+ │
+ ↓
+Results
+ │
+ ↓
+LLM
+ │
+ ↓
+Natural language answer
+```
+
+This is your **Natural Language → SQL GenAI Agent**.
+
+---
+
+# Level 16 — Add Database Schema to the LLM
+
+The LLM needs to know your database structure.
+
+For example:
+
+```text
+Customers
+---------
+CustomerID
+FirstName
+LastName
+Email
+Phone
+City
+Country
+
+Products
+--------
+ProductID
+ProductName
+Category
+UnitPrice
+StockQuantity
+
+Orders
+------
+OrderID
+CustomerID
+EmployeeID
+OrderDate
+Status
+TotalAmount
+```
+
+Then prompt:
+
+```python
+prompt = f"""
+You are a SQL Server expert.
+
+Database schema:
+
+{schema}
+
+Convert the user's question into
+one read-only SQL SELECT query.
+
+User question:
+
+{question}
+
+Return SQL only.
+"""
+```
+
+This dramatically improves Text-to-SQL reliability.
+
+---
+
+# Level 17 — Schema-Aware Tool
+
+```python
+@tool
+def get_database_schema() -> str:
+    """Return the database tables and columns."""
+
+    return """
+    Customers(
+        CustomerID,
+        FirstName,
+        LastName,
+        Email,
+        Phone,
+        City,
+        Country
+    )
+
+    Products(
+        ProductID,
+        ProductName,
+        Category,
+        UnitPrice,
+        StockQuantity
+    )
+
+    Orders(
+        OrderID,
+        CustomerID,
+        EmployeeID,
+        OrderDate,
+        Status,
+        TotalAmount
+    )
+    """
+```
+
+Now you can have:
+
+```text
+Agent
+ │
+ ├── get_database_schema()
+ │
+ └── execute_safe_sql()
+```
+
+---
+
+# Level 18 — Multiple Enterprise Tools
+
+A real enterprise GenAI agent might have:
+
+```python
+tools = [
+
+    get_database_schema,
+
+    execute_safe_sql,
+
+    search_documents,
+
+    get_customer,
+
+    get_open_tickets,
+
+    calculate_revenue,
+
+    get_employee,
+
+]
+```
+
+Then the agent decides which tool is appropriate.
+
+For example:
+
+### Question 1
+
+```text
+What is the total revenue?
+```
+
+Agent:
+
+```text
+execute_safe_sql
+```
+
+### Question 2
+
+```text
+What does our refund policy say?
+```
+
+Agent:
+
+```text
+search_documents
+```
+
+### Question 3
+
+```text
+Show open high-priority tickets.
+```
+
+Agent:
+
+```text
+execute_safe_sql
+```
+
+### Question 4
+
+```text
+What is employee 101's department?
+```
+
+Agent:
+
+```text
+get_employee
+```
+
+---
+
+# Level 19 — RAG Tool
+
+Your database also contains `Documents` and `DocumentChunks`, which are useful for GenAI/RAG practice. 
+
+You can create:
+
+```python
+@tool
+def search_knowledge(query: str) -> str:
+    """Search company knowledge and policies."""
+
+    # Later:
+    # query embedding
+    # FAISS search
+    # retrieve chunks
+    # return relevant documents
+
+    return "Relevant company information..."
+```
+
+Then:
+
+```text
+User
+ ↓
+Agent
+ ├── SQL Tool
+ │
+ ├── Knowledge/RAG Tool
+ │
+ ├── Calculator
+ │
+ └── Ticket Tool
+```
+
+This becomes a true **enterprise assistant**.
+
+---
+
+# Level 20 — LangGraph
+
+Once you understand LangChain agents, move to LangGraph.
+
+Instead of:
+
+```text
+LLM → Tool → LLM
+```
+
+you explicitly design a workflow:
+
+```text
+             ┌──────────────┐
+             │     User     │
+             └──────┬───────┘
+                    ↓
+             ┌──────────────┐
+             │     LLM      │
+             └──────┬───────┘
+                    ↓
+             ┌──────────────┐
+             │ Need Tool?   │
+             └───┬──────┬───┘
+                 No     Yes
+                  │       ↓
+                  │   ┌─────────┐
+                  │   │  Tool   │
+                  │   └────┬────┘
+                  │        ↓
+                  │    Tool Result
+                  │        │
+                  └────┬───┘
+                       ↓
+                 ┌───────────┐
+                 │   Final   │
+                 │   Answer  │
+                 └───────────┘
+```
+
+LangGraph becomes particularly useful when you need:
+
+* multiple steps
+* conditional routing
+* retries
+* human approval
+* state
+* memory
+* validation
+* error handling
+* multiple agents
+
+---
+
+# Level 21 — Production Architecture
+
+Your eventual project can look like:
+
+```text
+                    USER
+                      │
+                      ↓
+                STREAMLIT UI
+                      │
+                      ↓
+                  FASTAPI
+                      │
+                      ↓
+                LANGGRAPH
+                      │
+          ┌───────────┼────────────┐
+          ↓           ↓            ↓
+        LLM         Guardrails    Router
+     Qwen3 4B          │            │
+          │            │            │
+          └────────────┼────────────┘
+                       ↓
+                 TOOL SELECTION
+                       │
+       ┌───────────────┼────────────────┐
+       ↓               ↓                ↓
+   SQL Tool         RAG Tool       Business Tools
+       │               │                │
+       ↓               ↓                ↓
+ SQL Server           FAISS        APIs/Services
+       │               │                │
+       └───────────────┼────────────────┘
+                       ↓
+                    RESULTS
+                       ↓
+                      LLM
+                       ↓
+                 FINAL ANSWER
+```
+
+---
+
+# Level 22 — Human Approval
+
+For sensitive tools, don't let the AI execute immediately.
+
+Example:
+
+```text
+User
+ ↓
+LLM
+ ↓
+Generate SQL
+ ↓
+Safety Check
+ ↓
+Human Approval
+ ↓
+Execute
+```
+
+For example:
+
+```text
+AI generated:
+
+UPDATE Employees
+SET Salary = 1500000
+WHERE EmployeeID = 101
+
+⚠️ Approval required.
+
+[Approve] [Reject]
+```
+
+For your SQL learning project, I'd recommend keeping **production execution read-only** initially.
+
+---
+
+# Level 23 — Tool Security
+
+A professional GenAI tool should have:
+
+```text
+Authentication
+       ↓
+Authorization
+       ↓
+Input Validation
+       ↓
+Tool Selection
+       ↓
+Parameter Validation
+       ↓
+Execution
+       ↓
+Output Validation
+       ↓
+Audit Logging
+```
+
+For SQL:
+
+```text
+LLM
+ ↓
+SQL
+ ↓
+Parser
+ ↓
+Dangerous operation detection
+ ↓
+Table permission check
+ ↓
+Read-only DB user
+ ↓
+Timeout
+ ↓
+Row limit
+ ↓
+Execute
+```
+
+This is much better than simply checking a few keywords.
+
+---
+
+# Level 24 — Tool Calling vs Agent
+
+This distinction is important for interviews.
+
+### Tool Calling
+
+The model says:
+
+```text
+Call calculate_tax()
+```
+
+Your application executes it.
+
+### Agent
+
+An agent can reason through multiple steps:
+
+```text
+User
+ ↓
+Agent
+ ↓
+Tool A
+ ↓
+Result
+ ↓
+Agent
+ ↓
+Tool B
+ ↓
+Result
+ ↓
+Agent
+ ↓
+Final Answer
+```
+
+So:
+
+> **Tool = capability**
+
+> **Tool calling = model requests a capability**
+
+> **Agent = system that can decide and orchestrate capabilities over multiple steps**
+
+---
+
+# Level 25 — 10 Tool Examples You Should Build
+
+As a GenAI learner, build these progressively:
+
+| #  | Tool             | What you learn         |
+| -- | ---------------- | ---------------------- |
+| 1  | Calculator       | Basic tool             |
+| 2  | Date calculator  | Parameters             |
+| 3  | Employee lookup  | Structured data        |
+| 4  | Weather          | API integration        |
+| 5  | SQL query        | Database integration   |
+| 6  | File search      | Document processing    |
+| 7  | RAG search       | Embeddings + vector DB |
+| 8  | Email tool       | External action        |
+| 9  | API tool         | Enterprise integration |
+| 10 | Multi-tool agent | Agent orchestration    |
+
+---
+
+# Your Best Learning Path
+
+Because your goal is **GenAI + SQL + RAG + Agents**, I recommend this exact sequence:
+
+```text
+01 Python Functions
+       ↓
+02 LangChain @tool
+       ↓
+03 Tool Arguments
+       ↓
+04 Tool Descriptions
+       ↓
+05 Ollama + Qwen3
+       ↓
+06 bind_tools()
+       ↓
+07 Tool Calls
+       ↓
+08 Tool Execution
+       ↓
+09 Tool Calling Loop
+       ↓
+10 LangChain Agent
+       ↓
+11 SQL Tool
+       ↓
+12 SQL Safety Guardrails
+       ↓
+13 Natural Language → SQL
+       ↓
+14 RAG Tool
+       ↓
+15 Multiple Tools
+       ↓
+16 LangGraph
+       ↓
+17 Human Approval
+       ↓
+18 Memory
+       ↓
+19 Observability
+       ↓
+20 FastAPI + Streamlit
+       ↓
+21 Docker
+       ↓
+22 Enterprise GenAI Agent
+```
+
+### The project you should build while learning
+
+Your final project should be:
+
+**"Enterprise GenAI Assistant with SQL + RAG + Tools + Agent"**
+
+with:
+
+```text
+                    User
+                      ↓
+             "Show open tickets"
+                      ↓
+                   Agent
+                      ↓
+             ┌──────────────┐
+             │ Decide Tool  │
+             └──────┬───────┘
+                    ↓
+                SQL Tool
+                    ↓
+               SQL Server
+                    ↓
+                 Results
+                    ↓
+                   LLM
+                    ↓
+        "There are 3 open tickets..."
+```
+
+For:
+
+```text
+"What is the refund policy?"
+```
+
+the same agent can route to:
+
+```text
+RAG Tool
+ ↓
+DocumentChunks
+ ↓
+FAISS
+ ↓
+Relevant chunks
+ ↓
+LLM
+ ↓
+Answer
+```
+
+Your existing SQL practice database is particularly suitable for this because it already contains business tables plus RAG-oriented `Documents`/`DocumentChunks` and natural-language-to-SQL practice questions.  
+
+**The most important thing:** don't jump directly to a complicated agent. First make **one calculator tool**, then **multiple tools**, then **SQL**, then **safe SQL**, then **RAG**, and finally **LangGraph**. That progression will make tool calling much easier to understand and will also give you strong interview knowledge.

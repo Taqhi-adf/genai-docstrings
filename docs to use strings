@@ -1,35 +1,20 @@
 To write clear, effective docstrings in Python, follow PEP 257 standards: use triple-double quotes (`"""`), start with a concise command-form summary line, and leave a blank line before adding additional context.
-
----
-
 **Essential Best Practices**
-
 * **Summary Line:** Write in the imperative mood (e.g., `"Calculate total price."`, not `"Calculates total price."`).
 * **Explicit Types:** State argument types, default values, and return types clearly (or use type hints directly in the function signature).
 * **Document Exceptions:** Mention any errors or exceptions the function might explicitly raise.
 * **Consistency:** Stick to one style across your codebase (e.g., Google or NumPy style).
 
----
-
 **Common Docstring Styles with Examples**
-
 ### 1. One-Line Docstring
-
 Used for simple functions or methods where the purpose is obvious.
-
 ```python
 def square(x: float) -> float:
     """Return the square of a given number."""
     return x ** 2
 
-```
-
----
-
 ### 2. Google Style (Most Common)
-
 Clean, human-readable, and popular for general-purpose Python development.
-
 ```python
 def calculate_discount(price: float, discount: float = 0.10) -> float:
     """Calculate the final price of an item after applying a discount.
